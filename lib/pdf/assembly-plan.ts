@@ -1,4 +1,5 @@
 import { PdfBuilder } from './pdf-builder'
+import { renderDiagram, DIAGRAM_ASPECT, type DiagramKey } from './diagram-renderer'
 import type { FurnitureConfig, Piece } from '@/types'
 import { FURNITURE_DISPLAY_INFO } from '@/lib/algorithms/furniture-pieces'
 import { calculateAccessories } from '@/lib/algorithms/accessories'
@@ -9,6 +10,8 @@ interface AssemblyStep {
   title: string
   instructions: string[]
   note?: string
+  /** Clave del diagrama visual a renderizar debajo de las instrucciones */
+  diagram?: DiagramKey
 }
 
 function getAssemblySteps(config: FurnitureConfig, pieces: Piece[]): AssemblyStep[] {
@@ -94,6 +97,7 @@ function getAssemblySteps(config: FurnitureConfig, pieces: Piece[]): AssemblySte
     ...baseSteps,
     {
       title: 'Armar la caja principal',
+      diagram: 'cabinet-box',
       instructions: [
         'Coloca la BASE horizontal sobre la superficie de trabajo.',
         'Fija el LATERAL IZQUIERDO a la base usando minifix (2 unidades por unión).',
@@ -140,21 +144,22 @@ function getAssemblySteps(config: FurnitureConfig, pieces: Piece[]): AssemblySte
 function drawerStep(drawers: number, config: FurnitureConfig): AssemblyStep {
   return {
     title: `Instalar ${drawers} cajón${drawers > 1 ? 'es' : ''}`,
+    diagram: 'drawer-slide',
     instructions: [
       '── Armar la CAJA del cajón ──',
       'Une los dos LATERALES CAJÓN con la BASE CAJÓN usando tornillos 3.5×16mm.',
       'Fija el FONDO CAJÓN (panel trasero) entre los laterales.',
       'Verifica que la caja esté cuadrada antes de ajustar los tornillos.',
-      '── Instalar correderas ──',
-      'Marca la posición de las correderas en los laterales del mueble (misma altura en ambos lados).',
-      'Atornilla la parte fija de la corredera al lateral del mueble.',
-      'Atornilla la parte móvil de la corredera a los laterales de la caja del cajón.',
+      '── Instalar correderas telescópicas ──',
+      'Marca la altura de las correderas en ambos laterales del mueble (usar nivel).',
+      'Atornilla el RIEL FIJO al lateral del gabinete (2 tornillos por lado, M4×12).',
+      'Atornilla el RIEL MÓVIL al lateral externo de la caja del cajón (2 tornillos).',
       '── Montar y ajustar ──',
-      'Desliza la caja sobre las correderas y verifica que corra suavemente.',
+      'Desliza la caja sobre las correderas y verifica que corra sin esfuerzo.',
       'Atornilla el FRENTE CAJÓN a la caja desde adentro con tornillos 3.5×20mm.',
       'Ajusta el frente para que los espacios entre cajones sean uniformes (3–4mm).',
     ],
-    note: 'Instala los cajones de abajo hacia arriba para mejor acceso.',
+    note: 'Instala los cajones de abajo hacia arriba. Verifica que ambas correderas estén a la misma altura.',
   }
 }
 
@@ -162,6 +167,7 @@ function doorStep(doors: number, config: FurnitureConfig): AssemblyStep {
   const hingesPerDoor = config.heightMm > 1200 ? 3 : 2
   return {
     title: `Instalar ${doors} puerta${doors > 1 ? 's' : ''}`,
+    diagram: 'door-hinge',
     instructions: [
       `── Preparar bisagras (${hingesPerDoor} por puerta) ──`,
       'Marca las posiciones de bisagras en cada PUERTA: primera a 100mm del borde, última a 100mm del otro borde.',
@@ -181,6 +187,7 @@ function doorStep(doors: number, config: FurnitureConfig): AssemblyStep {
 function finishingStep(): AssemblyStep {
   return {
     title: 'Revisión final y agarraderas',
+    diagram: 'handle',
     instructions: [
       'Instala las AGARRADERAS usando los tornillos incluidos (normalmente M4×30mm).',
       'Haz el agujero pasante con broca de 5mm en la posición deseada.',
@@ -268,7 +275,7 @@ export function generateAssemblyPlanPdf(
   pdf.spaceY(6)
 
   steps.forEach((step, idx) => {
-    pdf.checkPageBreak(40)
+    pdf.checkPageBreak(step.diagram ? 100 : 40)
     pdf.drawText(`Paso ${idx + 1}: ${step.title}`, { size: 11, bold: true })
     pdf.spaceY(2)
 
@@ -285,6 +292,18 @@ export function generateAssemblyPlanPdf(
       pdf.spaceY(2)
       pdf.drawText(`  ℹ ${step.note}`, { size: 8, color: '#888888' })
     }
+
+    // ── Diagrama visual ───────────────────────────────────────────────────
+    if (step.diagram) {
+      pdf.spaceY(4)
+      try {
+        const imgData = renderDiagram(step.diagram, config)
+        pdf.drawImage(imgData, { maxW: 160, centered: true, aspectRatio: DIAGRAM_ASPECT })
+      } catch {
+        // Ignorar si el canvas no está disponible (SSR)
+      }
+    }
+
     pdf.spaceY(6)
     pdf.drawLine('#EEEEEE')
     pdf.spaceY(4)

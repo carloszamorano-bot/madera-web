@@ -68,11 +68,24 @@ export class PdfBuilder {
     return this
   }
 
-  drawImage(imgData: string, opts: { maxW?: number; centered?: boolean } = {}): this {
-    const { maxW = this.pageW - 2 * this.margin, centered = true } = opts
-    const img = new Image()
-    img.src = imgData
-    const ratio = img.naturalHeight / img.naturalWidth
+  drawImage(
+    imgData: string,
+    opts: {
+      maxW?: number
+      centered?: boolean
+      /** H/W ratio — si se provee, evita cargar la imagen para calcular dimensiones */
+      aspectRatio?: number
+    } = {}
+  ): this {
+    const { maxW = this.pageW - 2 * this.margin, centered = true, aspectRatio } = opts
+    let ratio: number
+    if (aspectRatio !== undefined) {
+      ratio = aspectRatio
+    } else {
+      const img = new Image()
+      img.src = imgData
+      ratio = img.naturalHeight / img.naturalWidth || 0.6
+    }
     const w = Math.min(maxW, this.pageW - 2 * this.margin)
     const h = w * ratio
     this.checkPageBreak(h + 4)

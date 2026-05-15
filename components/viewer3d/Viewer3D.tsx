@@ -322,27 +322,56 @@ function addDrawers(
     addMesh(ctx, drawerInnerW, drawerBoxH - ST, ST, drawerBoxMat,
       0, fy + ST / 2, boxCenterZ - drawerD / 2 + ST / 2)
 
-    // ── Tornillos visibles (4 en la base, 2 por lateral trasero) ─────────
-    const screwR = 4
-    // Tornillos en base del cajón (visibles desde frente)
+    // ── Tornillos en la base del cajón (frente visible) ──────────────────
     const screwY = fy - drawerBoxH / 2 + 3
     for (const sx of [-(drawerInnerW / 2 - 20), drawerInnerW / 2 - 20]) {
-      const sg = new THREE.SphereGeometry(screwR, 6, 6)
+      const sg = new THREE.SphereGeometry(4, 6, 6)
       const sm = new THREE.Mesh(sg, screwMat)
       sm.position.set(sx, screwY, D / 2 - T + 2)
-      ctx.scene.add(sm)
-      ctx.meshes.push(sm)
-      ctx.originals.push(sm.position.clone())
+      ctx.scene.add(sm); ctx.meshes.push(sm); ctx.originals.push(sm.position.clone())
     }
-    // Minifix en laterales del mueble (2 puntos por cajón)
-    for (const lx of [-(iw / 2 - T / 2 - 2), iw / 2 - T / 2 - 2]) {
-      const sg = new THREE.CylinderGeometry(5, 5, 3, 8)
-      const sm = new THREE.Mesh(sg, screwMat)
-      sm.position.set(lx, fy, boxCenterZ + drawerD / 4)
-      sm.rotation.z = Math.PI / 2
-      ctx.scene.add(sm)
-      ctx.meshes.push(sm)
-      ctx.originals.push(sm.position.clone())
+
+    // ── CORREDERAS TELESCÓPICAS ───────────────────────────────────────────
+    const RAIL_T = 4        // grosor del riel (mm)
+    const RAIL_H = 18       // alto del riel
+    const RAIL_D = drawerD - 10  // longitud del riel
+    const railY  = fy - drawerBoxH * 0.25  // tercio inferior del cajón
+
+    const railMat = new THREE.MeshLambertMaterial({ color: 0xB8B8C8 }) // acero inox
+    const moveMat = new THREE.MeshLambertMaterial({ color: 0xD4D4E4 }) // riel móvil más claro
+
+    // Riel FIJO: contra la cara interior del lateral del gabinete
+    const fixedXL = -(iw / 2 - RAIL_T / 2)
+    const fixedXR =  (iw / 2 - RAIL_T / 2)
+    addMesh(ctx, RAIL_T, RAIL_H, RAIL_D, railMat, fixedXL, railY, 0)
+    addMesh(ctx, RAIL_T, RAIL_H, RAIL_D, railMat, fixedXR, railY, 0)
+
+    // Riel MÓVIL: contra la cara exterior del lateral del cajón
+    // Se desplaza con el cajón (boxCenterZ)
+    const moveXL = -(iw / 2 - ST - RAIL_T / 2 - 2)
+    const moveXR =  (iw / 2 - ST - RAIL_T / 2 - 2)
+    addMesh(ctx, RAIL_T - 1, RAIL_H - 2, RAIL_D - 20, moveMat, moveXL, railY, boxCenterZ)
+    addMesh(ctx, RAIL_T - 1, RAIL_H - 2, RAIL_D - 20, moveMat, moveXR, railY, boxCenterZ)
+
+    // Tornillos de fijación del riel fijo (2 por lado, cilindros planos)
+    for (const sz of [-RAIL_D / 2 + 60, RAIL_D / 2 - 60]) {
+      for (const sx of [fixedXL, fixedXR]) {
+        const sg = new THREE.CylinderGeometry(5, 5, 2, 8)
+        const sm = new THREE.Mesh(sg, screwMat)
+        sm.position.set(sx, railY + RAIL_H / 2, sz)
+        sm.rotation.z = Math.PI / 2
+        ctx.scene.add(sm); ctx.meshes.push(sm); ctx.originals.push(sm.position.clone())
+      }
+    }
+    // Tornillos del riel móvil al cajón (2 por lado)
+    for (const sz of [boxCenterZ - RAIL_D / 2 + 40, boxCenterZ + RAIL_D / 2 - 40]) {
+      for (const sx of [moveXL, moveXR]) {
+        const sg = new THREE.CylinderGeometry(4, 4, 2, 8)
+        const sm = new THREE.Mesh(sg, screwMat)
+        sm.position.set(sx, railY + RAIL_H / 2 - 2, sz)
+        sm.rotation.z = Math.PI / 2
+        ctx.scene.add(sm); ctx.meshes.push(sm); ctx.originals.push(sm.position.clone())
+      }
     }
   }
 }
