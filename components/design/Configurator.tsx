@@ -8,13 +8,15 @@ import { createClient } from '@/lib/supabase/client'
 import CountStepper from './CountStepper'
 import PiecesList from './PiecesList'
 import MaterialSelector from './MaterialSelector'
+import AccessoriesList from './AccessoriesList'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Palette, Scissors, Box } from 'lucide-react'
 import type { Material, Color } from '@/types'
+import { calculateAccessories } from '@/lib/algorithms/accessories'
 
 export default function Configurator() {
   const router = useRouter()
@@ -206,14 +208,34 @@ export default function Configurator() {
         </Button>
       </div>
 
-      {/* Pieces list */}
+      {/* Pieces + Accessories tabs */}
       {calculatedPieces.length > 0 && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Piezas calculadas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PiecesList pieces={calculatedPieces} />
+          <CardContent className="pt-4">
+            <Tabs defaultValue="pieces">
+              <TabsList className="w-full mb-4">
+                <TabsTrigger value="pieces" className="flex-1">Piezas</TabsTrigger>
+                <TabsTrigger value="accessories" className="flex-1">Herrajes</TabsTrigger>
+              </TabsList>
+              <TabsContent value="pieces">
+                <PiecesList pieces={calculatedPieces} />
+              </TabsContent>
+              <TabsContent value="accessories">
+                <AccessoriesList
+                  accessories={calculateAccessories(
+                    {
+                      type: selectedType,
+                      widthMm, heightMm, depthMm,
+                      shelves, drawers, doors,
+                      materialId: selectedMaterialId,
+                      colorId: selectedColorId,
+                      edgeType: selectedEdgeType,
+                    },
+                    calculatedPieces
+                  )}
+                />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       )}
