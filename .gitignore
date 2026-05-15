@@ -43,3 +43,5 @@ next-env.d.ts
 # claude / superpowers
 .claude/
 .superpowers/
+
+.vercel
