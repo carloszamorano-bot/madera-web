@@ -267,34 +267,83 @@ function addShelves(ctx: BuildCtx, W: number, H: number, D: number, T: number, c
   }
 }
 
-// ── Cajones con frentes + agarraderas ─────────────────────────────────────────
+// ── Cajones: frente + CAJA COMPLETA (laterales + base + fondo) + tornillos ────
 function addDrawers(
   ctx: BuildCtx,
   W: number, H: number, D: number, T: number,
   count: number,
-  yBottom: number,   // Y base (desde -H/2+T)
-  areaH: number      // altura total de la zona de cajones
+  yBottom: number,
+  areaH: number
 ) {
   if (count <= 0) return
   const iw = W - 2 * T
   const dh = (areaH - count * 4) / count
 
-  for (let i = 0; i < count; i++) {
-    const frontY = yBottom + i * (dh + 4) + dh / 2
+  // Cajón: grosor de los laterales (más delgado que el panel principal)
+  const ST = Math.max(12, T - 4)          // side thickness
+  const drawerD = D - T - 30              // profundidad de la caja (30mm menos que gabinete)
+  const drawerInnerW = iw - 4 - 2 * ST   // ancho interior de la caja
+  const drawerBoxH = dh - 6              // altura de la caja del cajón
 
-    // Divisor horizontal (salvo el último)
+  // Material para el interior del cajón (madera sin tratar, más clara)
+  const drawerBoxMat = new THREE.MeshLambertMaterial({
+    color: new THREE.Color((ctx.panelMat as THREE.MeshLambertMaterial).color).lerp(new THREE.Color(0xffffff), 0.3),
+  })
+  const screwMat = new THREE.MeshLambertMaterial({ color: 0x888888 })
+
+  for (let i = 0; i < count; i++) {
+    const fy = yBottom + i * (dh + 4) + dh / 2
+
+    // ── Divisor horizontal entre cajones ──────────────────────────────────
     if (i < count - 1) {
       addMesh(ctx, iw, T, D * 0.85, ctx.panelMat, 0, yBottom + (i + 1) * (dh + 4) - 4, 0)
     }
 
-    // Frente del cajón (ligeramente saliente)
-    addMesh(ctx, iw - 4, dh - 2, T + 4, ctx.doorMat, 0, frontY, D / 2 - T / 2 + T + 2)
+    // ── Frente del cajón (overlay) ────────────────────────────────────────
+    const fz = D / 2 + T / 2 + 2
+    addMesh(ctx, iw - 4, drawerBoxH, T + 2, ctx.doorMat, 0, fy, fz)
+    addHandle(ctx, 0, fy, fz + T / 2 + 8)
 
-    // Agarradera centrada en el frente
-    addHandle(ctx, 0, frontY, D / 2 + T + 8)
+    // ── Caja interior del cajón (ligeramente abierta = offset +35mm) ─────
+    // El cajón se muestra parcialmente extraído para revelar su estructura
+    const pullZ = 35  // mm extraídos hacia adelante
+    const boxCenterZ = (D / 2 - T - pullZ) - drawerD / 2
 
-    // Caja interna del cajón (visible parcialmente)
-    addMesh(ctx, iw - 2 * T - 4, T, D - T - 4, ctx.panelMat, 0, frontY - dh / 2 + T / 2, 0) // base cajón
+    // Lateral izquierdo de la caja
+    addMesh(ctx, ST, drawerBoxH, drawerD, drawerBoxMat,
+      -(iw / 2 - ST / 2 - 2), fy, boxCenterZ)
+    // Lateral derecho de la caja
+    addMesh(ctx, ST, drawerBoxH, drawerD, drawerBoxMat,
+      iw / 2 - ST / 2 - 2, fy, boxCenterZ)
+    // Base del cajón
+    addMesh(ctx, drawerInnerW, ST, drawerD, drawerBoxMat,
+      0, fy - drawerBoxH / 2 + ST / 2, boxCenterZ)
+    // Fondo trasero del cajón
+    addMesh(ctx, drawerInnerW, drawerBoxH - ST, ST, drawerBoxMat,
+      0, fy + ST / 2, boxCenterZ - drawerD / 2 + ST / 2)
+
+    // ── Tornillos visibles (4 en la base, 2 por lateral trasero) ─────────
+    const screwR = 4
+    // Tornillos en base del cajón (visibles desde frente)
+    const screwY = fy - drawerBoxH / 2 + 3
+    for (const sx of [-(drawerInnerW / 2 - 20), drawerInnerW / 2 - 20]) {
+      const sg = new THREE.SphereGeometry(screwR, 6, 6)
+      const sm = new THREE.Mesh(sg, screwMat)
+      sm.position.set(sx, screwY, D / 2 - T + 2)
+      ctx.scene.add(sm)
+      ctx.meshes.push(sm)
+      ctx.originals.push(sm.position.clone())
+    }
+    // Minifix en laterales del mueble (2 puntos por cajón)
+    for (const lx of [-(iw / 2 - T / 2 - 2), iw / 2 - T / 2 - 2]) {
+      const sg = new THREE.CylinderGeometry(5, 5, 3, 8)
+      const sm = new THREE.Mesh(sg, screwMat)
+      sm.position.set(lx, fy, boxCenterZ + drawerD / 4)
+      sm.rotation.z = Math.PI / 2
+      ctx.scene.add(sm)
+      ctx.meshes.push(sm)
+      ctx.originals.push(sm.position.clone())
+    }
   }
 }
 

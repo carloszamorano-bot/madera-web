@@ -14,9 +14,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Palette, Scissors, Box } from 'lucide-react'
+import { Palette, Scissors, Box, FileText } from 'lucide-react'
 import type { Material, Color } from '@/types'
 import { calculateAccessories } from '@/lib/algorithms/accessories'
+import { generateAssemblyPlanPdf } from '@/lib/pdf/assembly-plan'
 
 export default function Configurator() {
   const router = useRouter()
@@ -205,6 +206,28 @@ export default function Configurator() {
         >
           <Box size={16} className="mr-2" />
           Ver 3D
+        </Button>
+        <Button
+          onClick={() => {
+            if (!selectedMaterial || calculatedPieces.length === 0) {
+              handleCalculate()
+            }
+            const mat = selectedMaterial
+            const col = selectedColor
+            if (!mat || !col) return
+            generateAssemblyPlanPdf(
+              { type: selectedType, widthMm, heightMm, depthMm, shelves, drawers, doors, materialId: selectedMaterialId, colorId: selectedColorId, edgeType: selectedEdgeType },
+              calculatedPieces.length > 0 ? calculatedPieces : [],
+              mat.name,
+              col.name,
+            )
+          }}
+          disabled={hasErrors || !selectedMaterial || !selectedColor}
+          variant="outline"
+          className="flex-1 min-w-[120px] border-blue-400 text-blue-600 hover:bg-blue-50"
+        >
+          <FileText size={16} className="mr-2" />
+          Plano de armado
         </Button>
       </div>
 

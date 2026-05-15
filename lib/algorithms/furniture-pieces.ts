@@ -92,7 +92,7 @@ export function calculatePieces(config: FurnitureConfig, thicknessMm: number): P
     case 'DESPENSERO':
     case 'RACK_TV':
     case 'ESTANTERIA':
-      return closetBase(w, h, d, t, shelves, doors)
+      return closetBase(w, h, d, t, shelves, drawers, doors)
     case 'ESCRITORIO':
       return escritorio(w, h, d, t, drawers)
     case 'MESA_COMEDOR':
@@ -108,22 +108,41 @@ export function calculatePieces(config: FurnitureConfig, thicknessMm: number): P
   }
 }
 
-function closetBase(w: number, h: number, d: number, t: number, shelves: number, doors: number): Piece[] {
-  const iw = w - 2 * t // interior width
-  const ih = h - 2 * t // interior height
+// ── Helper: piezas de la CAJA de un cajón ─────────────────────────────────────
+// Lateral cajón, Base cajón, Fondo cajón (panel trasero de la caja)
+function drawerBoxPieces(iw: number, d: number, t: number, dh: number, qty: number): Piece[] {
+  const st = Math.max(12, t - 4)           // grosor lateral cajón (más delgado)
+  const innerW = iw - 4 - 2 * st          // ancho interior caja
+  const boxD = d - t - 30                  // profundidad caja (30mm menos que gabinete)
+  return [
+    { label: 'Lateral cajón', widthMm: boxD, heightMm: dh - 4, quantity: qty * 2 },
+    { label: 'Base cajón',    widthMm: innerW, heightMm: boxD,   quantity: qty },
+    { label: 'Fondo cajón',   widthMm: innerW, heightMm: dh - st - 4, quantity: qty },
+  ]
+}
+
+function closetBase(w: number, h: number, d: number, t: number, shelves: number, drawers: number, doors: number): Piece[] {
+  const iw = w - 2 * t
+  const ih = h - 2 * t
   const pieces: Piece[] = [
     { label: 'Lateral Izq.', widthMm: d, heightMm: h, quantity: 1, edgeTop: true, edgeBottom: true },
     { label: 'Lateral Der.', widthMm: d, heightMm: h, quantity: 1, edgeTop: true, edgeBottom: true },
-    { label: 'Techo', widthMm: iw, heightMm: d, quantity: 1, edgeLeft: true, edgeRight: true },
-    { label: 'Base', widthMm: iw, heightMm: d, quantity: 1, edgeLeft: true, edgeRight: true },
-    { label: 'Fondo', widthMm: iw, heightMm: ih, quantity: 1 },
+    { label: 'Techo',        widthMm: iw, heightMm: d, quantity: 1, edgeLeft: true, edgeRight: true },
+    { label: 'Base',         widthMm: iw, heightMm: d, quantity: 1, edgeLeft: true, edgeRight: true },
+    { label: 'Fondo',        widthMm: iw, heightMm: ih, quantity: 1 },
   ]
   if (shelves > 0) {
     pieces.push({ label: 'Repisa', widthMm: iw, heightMm: d, quantity: shelves, edgeLeft: true, edgeRight: true })
   }
+  if (drawers > 0) {
+    const drawerAreaH = ih * 0.35
+    const dh = Math.floor((drawerAreaH - drawers * 4) / drawers)
+    pieces.push({ label: 'Frente cajón', widthMm: iw - 4, heightMm: dh, quantity: drawers, edgeTop: true, edgeBottom: true, edgeLeft: true, edgeRight: true })
+    pieces.push(...drawerBoxPieces(iw, d, t, dh, drawers))
+  }
   if (doors > 0) {
-    const doorW = Math.floor(w / doors)
-    pieces.push({ label: 'Puerta', widthMm: doorW - 4, heightMm: h - 4, quantity: doors, edgeTop: true, edgeBottom: true, edgeLeft: true, edgeRight: true })
+    const doorW = Math.floor(iw / doors)
+    pieces.push({ label: 'Puerta', widthMm: doorW - 4, heightMm: ih - 4, quantity: doors, edgeTop: true, edgeBottom: true, edgeLeft: true, edgeRight: true })
   }
   return pieces
 }
@@ -139,8 +158,7 @@ function escritorio(w: number, h: number, d: number, t: number, drawers: number)
   if (drawers > 0) {
     const dh = Math.floor((h - t - 4 * drawers) / drawers)
     pieces.push({ label: 'Frente cajón', widthMm: iw - 4, heightMm: dh, quantity: drawers, edgeTop: true, edgeBottom: true, edgeLeft: true, edgeRight: true })
-    pieces.push({ label: 'Base cajón', widthMm: iw - 2 * t - 4, heightMm: d - t - 4, quantity: drawers })
-    pieces.push({ label: 'Lateral cajón', widthMm: d - t - 4, heightMm: dh - 4, quantity: drawers * 2 })
+    pieces.push(...drawerBoxPieces(iw, d, t, dh, drawers))
   }
   return pieces
 }
@@ -169,8 +187,7 @@ function cocinaModular(w: number, h: number, d: number, t: number, shelves: numb
   if (drawers > 0) {
     const dh = Math.floor((ih * 0.4) / drawers)
     pieces.push({ label: 'Frente cajón', widthMm: iw - 4, heightMm: dh, quantity: drawers, edgeTop: true, edgeBottom: true, edgeLeft: true, edgeRight: true })
-    pieces.push({ label: 'Base cajón', widthMm: iw - 2 * t - 4, heightMm: d - t - 4, quantity: drawers })
-    pieces.push({ label: 'Lateral cajón', widthMm: d - t - 4, heightMm: dh - 4, quantity: drawers * 2 })
+    pieces.push(...drawerBoxPieces(iw, d, t, dh, drawers))
   }
   if (doors > 0) {
     const doorW = Math.floor(iw / doors)
@@ -190,8 +207,7 @@ function cajonera(w: number, h: number, d: number, t: number, drawers: number): 
     { label: 'Base', widthMm: iw, heightMm: d, quantity: 1, edgeLeft: true, edgeRight: true },
     { label: 'Fondo', widthMm: iw, heightMm: ih, quantity: 1 },
     { label: 'Frente cajón', widthMm: iw - 4, heightMm: dh, quantity: numDrawers, edgeTop: true, edgeBottom: true, edgeLeft: true, edgeRight: true },
-    { label: 'Base cajón', widthMm: iw - 2 * t - 4, heightMm: d - t - 4, quantity: numDrawers },
-    { label: 'Lateral cajón', widthMm: d - t - 4, heightMm: dh - 4, quantity: numDrawers * 2 },
+    ...drawerBoxPieces(iw, d, t, dh, numDrawers),
   ]
 }
 
@@ -210,8 +226,7 @@ function velador(w: number, h: number, d: number, t: number, shelves: number, dr
   if (drawers > 0) {
     const dh = Math.floor((ih * 0.35) / drawers)
     pieces.push({ label: 'Frente cajón', widthMm: iw - 4, heightMm: dh, quantity: drawers, edgeTop: true, edgeBottom: true, edgeLeft: true, edgeRight: true })
-    pieces.push({ label: 'Base cajón', widthMm: iw - 2 * t - 4, heightMm: d - t - 4, quantity: drawers })
-    pieces.push({ label: 'Lateral cajón', widthMm: d - t - 4, heightMm: dh - 4, quantity: drawers * 2 })
+    pieces.push(...drawerBoxPieces(iw, d, t, dh, drawers))
   }
   return pieces
 }
